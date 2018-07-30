@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<style type="text/css">
+			canvas {
+				border : 1px solid rgba(7,159,224,1);
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas" width="1000" height="800"></canvas>
+		<script src="js/jquery-3.3.1/jquery-3.3.1.min.js" type="text/javascript" charset="utf-8"></script>
+		<script type="text/javascript">
+			var canvas = document.getElementById("canvas")
+			var c = canvas.getContext("2d")		
+			var img = new Image();
+			var width = "",
+				height = "";
+			var nowEvent = 40;
+			var size = 8;
+			var x = size*10;
+			var y = size*10;
+			var bulletList = [];
+			var enemyList = [];
+			var isFire = true;
+			
+			img.src = "imgs/2.png";
+			img.onload = function(){
+				width = (img.width-4)/4;
+				height = img.height/4;
+				c.drawImage(img,0,0,width,height,x,y,width,height)
+			}
+//			监听按键走向
+			$(document).on("keydown",function(e){	
+//				console.log(e)
+				if (e.which == 37){
+					nowEvent = 37;
+					c.clearRect(x,y,width,height)
+					x -= size;
+					let i = x/size % 4;
+					c.drawImage(img,width * i,height,width,height,x,y,width,height)
+				}else if(e.which == 38){
+					nowEvent = 38;
+					c.clearRect(x,y,width,height)
+					y -=size;
+					let i = y/size % 4;
+					
+					c.drawImage(img,width * i,height*3,width,height,x,y,width,height)
+				}else if(e.which == 39){
+					nowEvent = 39;
+					c.clearRect(x,y,width,height)
+					x+=size;
+					let i = x/size % 4;
+					
+					c.drawImage(img,width * i,height*2,width,height,x,y,width,height)
+				}else if(e.which == 40){
+					nowEvent = 40;
+					c.clearRect(x,y,width,height)
+					y+=size;
+					let i = y/size % 4;
+					
+					c.drawImage(img,width * i,0,width,height,x,y,width,height)
+				}
+				if (e.which == 32){
+//					console.log(bulletList.length,isFire)
+					if (bulletList.length <= 10 && isFire){
+						startBullet(c)
+						setTimeout(function(){
+							isFire = true;
+						},400)
+					}
+					
+				}
+			})
+//			子弹移动
+			setInterval(function(){
+				for (let i = 0; i <bulletList.length ; i++){
+					if (bulletList[i].nowX > 1010 || bulletList[i].nowY > 810 || bulletList[i].nowX < 0 || bulletList[i].nowY <0){
+						bulletList.splice(i,1)
+						i-+1;
+						return
+					}else{
+						bulletActive(c,bulletList[i])
+					}
+				}
+			},40)
+			var enemyTimer = setInterval(function(){
+				enemy(c)
+			},4000)
+			var enemyActiveTimer = setInterval(function(){
+				for (let i = 0; i <enemyList.length ; i++){
+					enemyActive(c,enemyList[i])
+					for (let j = 0 ; j < bulletList.length ; j++){
+						var panduanX = bulletList[j].nowX > enemyList[i].enemyX-20 && bulletList[j].nowX < enemyList[i].enemyX+20,
+							panduanY = bulletList[j].nowY > enemyList[i].enemyY-20 && bulletList[j].nowY < enemyList[i].enemyY+20;
+						if (panduanX && panduanY){
+							c.clearRect(enemyList[i].enemyX-10,enemyList[i].enemyY-10,20,20)
+							c.clearRect(bulletList[j].nowX-5,bulletList[j].nowY-5,10,10)
+							bulletList.splice(j,1)
+							enemyList.splice(i,1)
+							j-+1;
+							i-=1;
+							return
+						}
+					}
+					if (x > enemyList[i].enemyX-40 && x < enemyList[i].enemyX && y > enemyList[i].enemyY-50 && y < enemyList[i].enemyY){
+							clearInterval(enemyTimer)
+							clearInterval(enemyActiveTimer)
+							alert("GAME OVER")
+						}
+				}
+			},40)
+			
+//			生产子弹
+			function startBullet(c){
+				isFire = false;
+				var nowX = x,
+				 	nowY = y,
+				 	speedX = 0,
+				 	speedY = 0;
+				if (nowEvent == 37){
+					speedX  = -size;
+					nowX = nowX - 5;
+					nowY = nowY + 15;
+				}else if(nowEvent == 38){
+					speedY = -size;
+					nowX = nowX + 15;
+					nowY = nowY - 5;
+				}else if (nowEvent == 39){
+					speedX  = size;
+					nowX = nowX + 50;
+					nowY = nowY + 15;
+				}else if(nowEvent == 40){
+					speedY = size;
+					nowX = nowX +15;
+					nowY = nowY + 50;
+				}
+				bulletList.push({nowX : nowX , nowY : nowY,speedX : speedX,speedY:speedY})
+			}
+//			子弹移动
+			function bulletActive(c,list){
+				c.clearRect(list.nowX-5,list.nowY-5,10,10)
+				list.nowX = list.nowX + list.speedX;
+				list.nowY = list.nowY + list.speedY;
+				c.beginPath();
+				c.fillStyle = "black";
+				c.arc(list.nowX,list.nowY,5,0,2*Math.PI,false);
+				c.fill();
+				c.closePath();
+			}
+			
+//			生产敌人
+			function enemy(c){
+				c.beginPath();
+				var where = Math.floor(Math.random()*40) % 4;
+				var enemyX =(where == 1 ?0 : where == 2 ? 1000 : Math.floor(Math.random()*1000)),
+					enemyY =(where == 3 ?0 : where == 0 ? 800 : Math.floor(Math.random()*800)),
+					directionX = 0,
+					directionY = 0;
+				enemyList.push({enemyX : enemyX,enemyY:enemyY,directionX : directionX,directionY:directionY})	
+				c.fillStyle = "black";
+				c.arc(enemyX,enemyY,10,0,2*Math.PI,false);
+				c.fill();
+				c.closePath();
+			}
+//			敌人移动
+			function enemyActive(c,list){
+				c.clearRect(list.enemyX-10,list.enemyY-10,20,20)
+				c.beginPath();
+				list.directionX = x+15 > list.enemyX ? 1 : x+15 == list.enemyX ? 0 : -1;
+				list.directionY = y+15 > list.enemyY ? 1 : y+15 == list.enemyY ? 0 : -1;
+				list.enemyX = list.enemyX + list.directionX;
+				list.enemyY = list.enemyY + list.directionY;
+				c.fillStyle = "black";
+				c.arc(list.enemyX,list.enemyY,10,0,2*Math.PI,false);
+				c.fill();
+				c.closePath();
+				
+			}
+		</script>
+	</body>
+</html>
